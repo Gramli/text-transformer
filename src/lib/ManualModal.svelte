@@ -8,10 +8,12 @@
       <h2>📖 Very Official Manual 📖</h2>
       <ul>
         <li>1. Type words in the top box. <i>Do not try to make sense of them.</i></li>
-        <li>2. Press <b>Scroll Lock</b> or <b>Insert</b> to transform text. Yes, your Enter/Space keys are useless.</li>
+        <li>2. Press <b>Scroll Lock</b> or <b>Insert</b> to transform. Yes, your Enter/Space keys are useless.</li>
         <li>3. Press <b>Pause</b> to shout at your computer (assuming it even listens).</li>
-        <li>4. Click <b>Switch Mode</b> to cycle through various stages of sanity loss.</li>
-        <li>5. Pay $499 for premium tokens if prompted. We accept floppy disks only.</li>
+        <li>4. Click <b>Switch Mode</b> to jump to a <i>completely random</i> language. No order. No reason.</li>
+        <li>5. Use the <b>floating dropdown</b> (somewhere on screen) to pick a specific language like a responsible adult.</li>
+        <li>6. Pay $499 for premium tokens if prompted. We accept floppy disks only.</li>
+        <li>7. Click <b>Works on My Machine</b> for full technical support.</li>
       </ul>
       <button class="manual-close-btn" on:click={() => visible = false}>GTFO</button>
     </div>
@@ -32,7 +34,7 @@
   .manual-modal {
     position: relative;
     background: #00ffff;
-    padding: 2rem 3rem 5rem 3rem;
+    padding: 2rem 3rem 4rem 3rem;
     border: 8px solid #ff0000;
     border-radius: 30px;
     box-shadow: 10px 10px 0px #000;
@@ -40,6 +42,7 @@
     font-family: 'Comic Sans MS', cursive;
     color: #000;
     transform: rotate(2deg);
+    overflow: visible;
   }
   .manual-modal h2 {
     font-size: 2.5rem;

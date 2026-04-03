@@ -25,6 +25,7 @@
   let isListening = false;
   let isPlaying = false;
   let isFrozen = false;
+  let comboPos = { top: 50, left: 50 };
   
   $: modeInfo = modes[curModeIdx];
   $: mode = modeInfo.id;
@@ -51,9 +52,20 @@
   }
 
   function cycleMode() {
-    curModeIdx = (curModeIdx + 1) % modes.length;
-    transformedText = ""; 
+    let newIdx;
+    do { newIdx = Math.floor(Math.random() * modes.length); } while (newIdx === curModeIdx);
+    curModeIdx = newIdx;
+    transformedText = "";
     triggerShaking();
+  }
+
+  function selectMode(e) {
+    const idx = parseInt(e.target.value, 10);
+    if (!isNaN(idx) && idx !== curModeIdx) {
+      curModeIdx = idx;
+      transformedText = "";
+      triggerShaking();
+    }
   }
 
   function copyText() {
@@ -93,6 +105,15 @@
       }
     }, Math.floor(Math.random() * 20000) + 20000);
 
+    // Random position for language combobox — avoid dead center, stay in edge zones
+    const edgeZones = [
+      { top: 10 + Math.random() * 15, left: 5 + Math.random() * 20 },
+      { top: 10 + Math.random() * 15, left: 70 + Math.random() * 20 },
+      { top: 75 + Math.random() * 15, left: 5 + Math.random() * 20 },
+      { top: 75 + Math.random() * 15, left: 70 + Math.random() * 20 },
+    ];
+    comboPos = edgeZones[Math.floor(Math.random() * edgeZones.length)];
+
     const bgInterval = setInterval(() => {
       if (modeInfo.bgColors) {
         bgIndex = (bgIndex + 1) % modeInfo.bgColors.length;
@@ -130,6 +151,15 @@
   
   <EvilClippy />
   <CursorTrails />
+
+  <div class="lang-picker" style="top: {comboPos.top}%; left: {comboPos.left}%;">
+    <label for="lang-select">🌀 PICK UR LANG</label>
+    <select id="lang-select" value={curModeIdx} on:change={selectMode}>
+      {#each modes as m, i}
+        <option value={i}>{m.label}</option>
+      {/each}
+    </select>
+  </div>
 
   <div class="womm-btn-wrapper">
     <button class="womm-btn" on:click={() => isFrozen = true}>Works on My Machine</button>
@@ -212,6 +242,40 @@
   .shaking {
     animation: shake 0.3s;
     animation-iteration-count: 2;
+  }
+
+  .lang-picker {
+    position: fixed;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transform: rotate(var(--tilt, -4deg));
+    filter: drop-shadow(3px 3px 0 black);
+  }
+  .lang-picker label {
+    font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+    font-size: 0.85rem;
+    font-weight: 900;
+    color: #ff00ff;
+    text-shadow: 1px 1px 0 black;
+    background: yellow;
+    padding: 2px 6px;
+    border: 2px solid black;
+  }
+  .lang-picker select {
+    font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+    font-size: 0.9rem;
+    background: #000080;
+    color: lime;
+    border: 3px outset #888;
+    padding: 4px 6px;
+    cursor: pointer;
+    outline: none;
+    max-width: 180px;
+  }
+  .lang-picker select:focus {
+    border-style: inset;
   }
 
   .womm-btn-wrapper {
