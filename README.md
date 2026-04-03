@@ -8,7 +8,7 @@ Built for the **DEV April Fools Challenge** 🎉
 
 ## What It Does
 
-The Absurd Text Transformer takes normal text and ruins it — beautifully. It offers **16 transformation modes**, each with a distinct personality, unique theme, and its own TTS voice settings.
+The Absurd Text Transformer takes normal text and ruins it — beautifully. It offers **17 transformation modes**, each with a distinct personality, unique theme, and its own TTS voice settings.
 
 ### Transformation Modes
 
@@ -30,6 +30,7 @@ The Absurd Text Transformer takes normal text and ruins it — beautifully. It o
 | 🏢 Corporate Synergy | Leverages core competencies going forward |
 | 😈 Zalgo | C̴̦͝o̵͕̓r̵̺̔r̴̳̿u̵͇͊p̷̣̿t̷̩̒e̷͚͗d̶̠̓ text corruption |
 | 💥 Broken Regex | `<[Object object]>` escaping `undefined` everywhere |
+| 🚀 Startup Hustle | Pivot your MVP into a unicorn hypothesis at scale |
 
 ---
 

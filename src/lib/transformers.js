@@ -287,5 +287,56 @@ export const modes = [
       if (!text.trim()) return "";
       return "^(?:(?!" + text.trim().replace(/\s+/g, "\\s+(.*?)") + ")[\\s\\S])*$";
     }
+  },
+  {
+    id: "startup",
+    label: "Startup Hustle 🚀",
+    msg: "We're disrupting disruption. Pivot or die.",
+    copyMsg: "Shipped to prod! 🚀",
+    bgColor: "#f5f0ff",
+    transform: (text) => {
+      if (!text.trim()) return "";
+      const startupMap = {
+        "idea":     "unicorn hypothesis",
+        "plan":     "go-to-market roadmap",
+        "work":     "hustle",
+        "problem":  "pain point",
+        "change":   "pivot",
+        "hire":     "onboard a rockstar",
+        "fire":     "sunset the headcount",
+        "meeting":  "standup",
+        "failure":  "learnings",
+        "success":  "hockey stick growth",
+        "money":    "runway",
+        "product":  "MVP",
+        "user":     "early adopter",
+        "build":    "ship",
+        "talk":     "async",
+        "good":     "10x",
+        "bad":      "pre-product-market-fit",
+        "fast":     "default aggressive",
+        "slow":     "not iterating fast enough",
+        "old":      "legacy",
+        "new":      "disruptive",
+        "company":  "rocketship",
+        "team":     "founding team",
+        "boss":     "co-founder",
+        "customer": "design partner",
+        "website":  "landing page",
+        "email":    "cold outreach",
+      };
+      const buzzwords = [
+        "move fast", "iterate", "disrupt", "scale", "10x growth",
+        "product-market fit", "growth hack", "agile", "ROI", "Series A"
+      ];
+      const words = text.split(/\s+/).map(w => {
+        const clean = w.toLowerCase().replace(/[^a-z]/g, "");
+        if (startupMap[clean]) return matchCase(w, startupMap[clean]);
+        if (Math.random() > 0.85) return w + " (but at scale)";
+        return w;
+      });
+      const buzz = buzzwords[Math.floor(Math.random() * buzzwords.length)];
+      return words.join(" ") + ` — and that's how we ${buzz}.`;
+    }
   }
 ];
