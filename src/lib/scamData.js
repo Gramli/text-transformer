@@ -9,3 +9,18 @@ export const scams = [
   { title: "🕵️‍♂️ SEE WHO BLOCKED YOU!", body: "Find out which of your friends blocked or deleted you on MSN/AOL! 100% Guaranteed working trick!", button: "SCAN BUDDY LIST" },
   { title: "💿 1000 HOURS FREE INTERNET 💿", body: "Order your FREE trial CD-ROM today! No credit card required (except for excessive shipping, handling, and recurring fees).", button: "MAIL MY CD" },
 ];
+
+export const developerExcuses = [
+  "Works on my machine. Did you try turning your aura off and on again?",
+  "I didn't test it, but I'm 100% sure it's a DNS issue.",
+  "Wait, are you using Chrome? Oh, it only works in Netscape Navigator.",
+  "Have you tried deleting node_modules and rethinking your life choices?",
+  "It compiled fine on my end. Have you reinstalled Windows?",
+  "That's not a bug, it's an undocumented surprise feature.",
+  "I literally changed one CSS class, how did the whole database drop?",
+  "It works perfectly in my mind.",
+  "Please clear your cache, your cookies, and your karma.",
+  "We don't support users who find bugs.",
+  "Did you try blowing on the cartridge?",
+  "The code is compiling. It just takes a few years.",
+];

@@ -113,14 +113,19 @@ gcloud run deploy text-transformer \
 ```
 src/
 ├── App.svelte              # Main application host
+├── main.js                 # Entry point, global CSS imports
+├── app.css                 # Global base styles
 ├── lib/
-│   ├── transformers.js     # All 16 transformation mode definitions
+│   ├── config.js           # Timing/threshold constants
+│   ├── transformers.js     # All 17 transformation mode definitions
 │   ├── speechService.js    # TTS and Speech Recognition logic
-│   ├── scamData.js         # Scam pop-up content
+│   ├── scamData.js         # Scam pop-up content & developer excuses
+│   ├── modeThemes.css      # Per-mode visual theme overrides
 │   ├── ManualModal.svelte  # "How to use" modal
 │   ├── CheatsModal.svelte  # 90s game cheat codes modal
 │   ├── ScamModal.svelte    # Random scam pop-up
 │   ├── PremiumModal.svelte # Fake premium upsell
+│   ├── BSODModal.svelte    # "Works on My Machine" BSOD overlay
 │   ├── AbsurdTimeBadge.svelte  # Timezone badge
 │   ├── EvilClippy.svelte   # Annoying floating paperclip
 │   ├── CursorTrails.svelte # 90s cursor particle effects

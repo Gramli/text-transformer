@@ -3,39 +3,20 @@
   import { modes } from "./lib/transformers.js";
   import { scams } from "./lib/scamData.js";
   import { initSpeechRecognition, initVoices, toggleListening, speakText, stopSpeaking } from "./lib/speechService.js";
+  import {
+    SHAKE_THRESHOLD, SHAKE_COOLDOWN_MS, SHAKING_DURATION_MS,
+    PREMIUM_DELAY_MIN_MS, PREMIUM_DELAY_MAX_MS,
+    SCAM_INTERVAL_MIN_MS, SCAM_INTERVAL_RANGE_MS, BG_CYCLE_MS,
+  } from "./lib/config.js";
   import ManualModal from "./lib/ManualModal.svelte";
   import ScamModal from "./lib/ScamModal.svelte";
   import PremiumModal from "./lib/PremiumModal.svelte";
+  import BSODModal from "./lib/BSODModal.svelte";
   import AbsurdTimeBadge from "./lib/AbsurdTimeBadge.svelte";
   import CheatsModal from "./lib/CheatsModal.svelte";
   import EvilClippy from "./lib/EvilClippy.svelte";
   import CursorTrails from "./lib/CursorTrails.svelte";
   import GandalfBlocker from "./lib/GandalfBlocker.svelte";
-
-  // ── Constants ──────────────────────────────────────────
-  const SHAKE_THRESHOLD = 18;
-  const SHAKE_COOLDOWN_MS = 1500;
-  const SHAKING_DURATION_MS = 500;
-  const PREMIUM_DELAY_MIN_MS = 60_000;
-  const PREMIUM_DELAY_MAX_MS = 180_000;
-  const SCAM_INTERVAL_MIN_MS = 20_000;
-  const SCAM_INTERVAL_RANGE_MS = 20_000;
-  const BG_CYCLE_MS = 1500;
-
-  const DEVELOPER_EXCUSES = [
-    "Works on my machine. Did you try turning your aura off and on again?",
-    "I didn't test it, but I'm 100% sure it's a DNS issue.",
-    "Wait, are you using Chrome? Oh, it only works in Netscape Navigator.",
-    "Have you tried deleting node_modules and rethinking your life choices?",
-    "It compiled fine on my end. Have you reinstalled Windows?",
-    "That's not a bug, it's an undocumented surprise feature.",
-    "I literally changed one CSS class, how did the whole database drop?",
-    "It works perfectly in my mind.",
-    "Please clear your cache, your cookies, and your karma.",
-    "We don't support users who find bugs.",
-    "Did you try blowing on the cartridge?",
-    "The code is compiling. It just takes a few years."
-  ];
 
   // ── State ──────────────────────────────────────────────
   let inputText = "";
@@ -47,17 +28,16 @@
   let isTransforming = false;
   let isListening = false;
   let isPlaying = false;
-  let isFrozen = false;
-  let currentExcuse = "";
 
   let showPremiumModal = false;
   let showScamModal = false;
   let showManual = false;
   let showCheats = false;
-  let currentScam = null;
+  let showBSOD = false;
   let showGandalf = false;
-  let pastedTextGandalf = "";
 
+  let currentScam = null;
+  let pastedTextGandalf = "";
   let comboPos = { top: 50, left: 50 };
 
   // ── Derived ────────────────────────────────────────────
@@ -97,11 +77,6 @@
     const text = clipData ? clipData.getData('text') : "";
     pastedTextGandalf = text || "[ REDACTED CHAOS ]";
     showGandalf = true;
-  }
-
-  function triggerWOMM() {
-    currentExcuse = DEVELOPER_EXCUSES[Math.floor(Math.random() * DEVELOPER_EXCUSES.length)];
-    isFrozen = true;
   }
 
   function cycleMode() {
@@ -258,22 +233,10 @@
   </div>
 
   <div class="womm-btn-wrapper">
-    <button class="womm-btn" on:click={triggerWOMM}>Works on My Machine</button>
+    <button class="womm-btn" on:click={() => showBSOD = true}>Works on My Machine</button>
   </div>
 
-  {#if isFrozen}
-    <div class="freeze-overlay" on:click={() => isFrozen = false}>
-      <div class="bsod-content">
-        <div class="bsod-title">A fatal exception 0E has occurred at 0xDEADBEEF in 0x00000000.</div>
-        <div class="bsod-excuse">*** {currentExcuse}</div>
-        <div class="bsod-instructions">
-          * Press any key to terminate the current application.<br>
-          * Press CTRL+ALT+DEL again to restart your computer. You will lose any unsaved information in all applications.
-        </div>
-        <div class="bsod-prompt">Press any key to continue _</div>
-      </div>
-    </div>
-  {/if}
+  <BSODModal visible={showBSOD} on:close={() => showBSOD = false} />
 
   <div class="container {mode} {isTransforming ? 'shaking' : ''}">
     <header>
@@ -421,56 +384,6 @@
     100% { background-color: magenta; color: yellow; border-color: cyan; box-shadow: -5px -5px 0px red; }
   }
 
-  .freeze-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #0000aa; /* BSOD Blue */
-    z-index: 9999999;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    cursor: crosshair;
-  }
-  .bsod-content {
-    color: #fff;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 1.2rem;
-    pointer-events: none;
-    user-select: none;
-    text-align: left;
-    max-width: 600px;
-    width: 90%;
-  }
-  .bsod-title {
-    text-align: center;
-    background: #fff;
-    color: #0000aa;
-    display: inline-block;
-    margin: 0 auto 30px auto;
-    padding: 0 10px;
-    font-weight: bold;
-    margin-left: 50%;
-    transform: translateX(-50%);
-  }
-  .bsod-excuse {
-    margin-bottom: 30px;
-    font-weight: bold;
-    color: #fff;
-  }
-  .bsod-instructions {
-    margin-bottom: 30px;
-    line-height: 1.6;
-  }
-  .bsod-prompt {
-    text-align: center;
-    animation: blink 1s infinite;
-  }
-  @keyframes blink {
-    0%, 49% { opacity: 1; }
-    50%, 100% { opacity: 0; }
-  }
-
   /* ── Container & content ──────────────────────────────────── */
   .container { background: rgba(255, 255, 255, 0.9); padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-width: 800px; width: 100%; position: relative; transition: all 0.3s ease; }
 
@@ -525,47 +438,6 @@
     color: #ff0;
   }
 
-  /* ── Mode themes ──────────────────────────────────────────── */
-  .container.yoda { background: rgba(10, 25, 47, 0.95); color: #64ffda; font-family: 'Courier New', Courier, monospace; border: 2px solid #64ffda; box-shadow: 0 0 20px rgba(100, 255, 218, 0.2); }
-  .container.yoda textarea { background: #112240; color: #ccd6f6; border: 1px solid #64ffda; }
-  .container.yoda .action-btn { background: #64ffda; color: #0a192f; border: none; }
-  .container.yoda .action-btn:hover { background: #52e0c4; transform: scale(1.05); }
-  
-  .container.pirate { background: #ab8654; background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.1), rgba(0,0,0,0.1) 10px, transparent 10px, transparent 20px); border: 5px dashed #4e3512; color: #2b1d0c; font-family: 'Times New Roman', Times, serif; box-shadow: inset 0 0 20px #4e3512; }
-  .container.pirate textarea { background: #e6d3a6; border: 2px dashed #4e3512; color: #4e3512; font-family: 'Cursive', serif; font-weight: bold; }
-  .container.pirate .action-btn { background: #ffd700; color: #000; border: 3px solid #b8860b; border-radius: 5px; }
-  
-  .container.baby { background: #ffe6f2; border: 10px solid #cce6ff; border-radius: 40px; color: #ff66a3; font-family: 'Comic Sans MS', cursive, sans-serif; box-shadow: 0 0 30px #ffb3d9; }
-  .container.baby textarea { background: #fff; border: 3px dotted #ff99c2; border-radius: 20px; color: #ff66a3; }
-  .container.baby .action-btn { background: #cce6ff; color: #ff66a3; border: 2px solid #ff99c2; border-radius: 20px; }
-
-  .container.cat { background: repeating-linear-gradient(90deg, #ff9900, #ff9900 20px, #000 20px, #000 40px); color: #fff; border: 5px solid #ff9900; font-family: 'Impact', sans-serif; position: relative; }
-  .container.cat::before { content: ''; position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index: 0; }
-  .container.cat > * { position: relative; z-index: 1; }
-  .container.cat textarea { background: rgba(255,255,255,0.9); color: #000; border: 3px dashed #ff9900; }
-  .container.cat .action-btn { background: #ff9900; color: #000; border: 2px solid #fff; border-radius: 50%; min-width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; }
-  .container.cat .action-btn:hover { transform: scale(1.2) rotate(15deg); }
-
-  .container.dog { background: #d2b48c; border: 8px solid #8b4513; border-radius: 20px; color: #4a2511; font-family: 'Georgia', serif; position: relative; box-shadow: inset 0 0 15px rgba(139, 69, 19, 0.5); }
-  .container.dog textarea { background: #fff8dc; border: 3px dashed #8b4513; color: #4a2511; }
-  .container.dog .action-btn { background: #8b4513; color: #fff8dc; border: 3px solid #5a2e0b; border-radius: 15px; }
-
-  .container.hamster { background: #ffebcd; border: 6px dotted #d2691e; border-radius: 50px; color: #a0522d; font-family: 'Verdana', sans-serif; position: relative; box-shadow: 0 0 25px rgba(210, 105, 30, 0.4); }
-  .container.hamster textarea { background: #fff; border: 4px solid #cd853f; color: #8b4513; border-radius: 25px; }
-  .container.hamster .action-btn { background: #d2691e; color: #fff; border: 2px dashed #ffebcd; border-radius: 25px; }
-
-  .container.duck { background: #fffacd; border: 5px solid #ffaa00; border-radius: 20px; color: #cc5500; font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif; box-shadow: 0 0 15px rgba(255, 170, 0, 0.5); }
-  .container.duck textarea { background: #fffdf0; border: 3px dashed #ffaa00; color: #cc5500; }
-  .container.duck .action-btn { background: #ffaa00; color: #fff; border: 3px solid #e69900; border-radius: 10px; }
-
-  .container.cow { background: #ffffff; border: 8px dashed #000000; border-radius: 10px; color: #000000; font-family: 'Courier New', Courier, monospace; box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.2); }
-  .container.cow textarea { background: #f9f9f9; border: 2px solid #000; color: #000; }
-  .container.cow .action-btn { background: #000; color: #fff; border: 2px solid #fff; border-radius: 5px; }
-
-  .container.vending { background: #2f4f4f; border: 10px solid #a9a9a9; border-radius: 5px; color: #00ff00; font-family: 'Consolas', monospace; box-shadow: inset 0 0 20px #000; }
-  .container.vending textarea { background: #000000; border: 2px solid #00ff00; color: #00ff00; text-transform: uppercase; }
-  .container.vending .action-btn { background: #00ff00; color: #000; border: 4px solid #006400; border-radius: 2px; }
-
   /* ── Header, toggle & IO ─────────────────────────────────── */
   header { text-align: center; margin-bottom: 1.5rem; }
   header h1 { font-size: 2.5rem; margin: 0; text-transform: uppercase; }
@@ -584,7 +456,6 @@
   @keyframes blink { from { opacity: 1; } to { opacity: 0; } }
   textarea { width: 100%; height: 150px; padding: 1rem; font-size: 1.2rem; border-radius: 0.5rem; border: 3px dashed #ff00ff; resize: vertical; box-sizing: border-box; font-family: inherit; transition: all 0.2s ease;}
   textarea:focus { outline: none; border-color: #00ffff; background: #ffffe0; transform: scale(1.02); }
-  .container.yoda textarea:focus { background: #1a365d; border-color: #64ffda; }
   
   .output-pane { position: relative; }
   .action-buttons { position: absolute; right: 1rem; bottom: 1rem; display: flex; gap: 1rem; z-index: 10; }

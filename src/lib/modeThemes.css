@@ -1,0 +1,43 @@
+/* ── Mode theme overrides ──────────────────────────────────── */
+/* Imported globally so scoped Svelte selectors don't interfere */
+
+.container.yoda { background: rgba(10, 25, 47, 0.95); color: #64ffda; font-family: 'Courier New', Courier, monospace; border: 2px solid #64ffda; box-shadow: 0 0 20px rgba(100, 255, 218, 0.2); }
+.container.yoda textarea { background: #112240; color: #ccd6f6; border: 1px solid #64ffda; }
+.container.yoda textarea:focus { background: #1a365d; border-color: #64ffda; }
+.container.yoda .action-btn { background: #64ffda; color: #0a192f; border: none; }
+.container.yoda .action-btn:hover { background: #52e0c4; transform: scale(1.05); }
+
+.container.pirate { background: #ab8654; background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.1), rgba(0,0,0,0.1) 10px, transparent 10px, transparent 20px); border: 5px dashed #4e3512; color: #2b1d0c; font-family: 'Times New Roman', Times, serif; box-shadow: inset 0 0 20px #4e3512; }
+.container.pirate textarea { background: #e6d3a6; border: 2px dashed #4e3512; color: #4e3512; font-family: 'Cursive', serif; font-weight: bold; }
+.container.pirate .action-btn { background: #ffd700; color: #000; border: 3px solid #b8860b; border-radius: 5px; }
+
+.container.baby { background: #ffe6f2; border: 10px solid #cce6ff; border-radius: 40px; color: #ff66a3; font-family: 'Comic Sans MS', cursive, sans-serif; box-shadow: 0 0 30px #ffb3d9; }
+.container.baby textarea { background: #fff; border: 3px dotted #ff99c2; border-radius: 20px; color: #ff66a3; }
+.container.baby .action-btn { background: #cce6ff; color: #ff66a3; border: 2px solid #ff99c2; border-radius: 20px; }
+
+.container.cat { background: repeating-linear-gradient(90deg, #ff9900, #ff9900 20px, #000 20px, #000 40px); color: #fff; border: 5px solid #ff9900; font-family: 'Impact', sans-serif; position: relative; }
+.container.cat::before { content: ''; position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index: 0; }
+.container.cat > * { position: relative; z-index: 1; }
+.container.cat textarea { background: rgba(255,255,255,0.9); color: #000; border: 3px dashed #ff9900; }
+.container.cat .action-btn { background: #ff9900; color: #000; border: 2px solid #fff; border-radius: 50%; min-width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; }
+.container.cat .action-btn:hover { transform: scale(1.2) rotate(15deg); }
+
+.container.dog { background: #d2b48c; border: 8px solid #8b4513; border-radius: 20px; color: #4a2511; font-family: 'Georgia', serif; position: relative; box-shadow: inset 0 0 15px rgba(139, 69, 19, 0.5); }
+.container.dog textarea { background: #fff8dc; border: 3px dashed #8b4513; color: #4a2511; }
+.container.dog .action-btn { background: #8b4513; color: #fff8dc; border: 3px solid #5a2e0b; border-radius: 15px; }
+
+.container.hamster { background: #ffebcd; border: 6px dotted #d2691e; border-radius: 50px; color: #a0522d; font-family: 'Verdana', sans-serif; position: relative; box-shadow: 0 0 25px rgba(210, 105, 30, 0.4); }
+.container.hamster textarea { background: #fff; border: 4px solid #cd853f; color: #8b4513; border-radius: 25px; }
+.container.hamster .action-btn { background: #d2691e; color: #fff; border: 2px dashed #ffebcd; border-radius: 25px; }
+
+.container.duck { background: #fffacd; border: 5px solid #ffaa00; border-radius: 20px; color: #cc5500; font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif; box-shadow: 0 0 15px rgba(255, 170, 0, 0.5); }
+.container.duck textarea { background: #fffdf0; border: 3px dashed #ffaa00; color: #cc5500; }
+.container.duck .action-btn { background: #ffaa00; color: #fff; border: 3px solid #e69900; border-radius: 10px; }
+
+.container.cow { background: #ffffff; border: 8px dashed #000000; border-radius: 10px; color: #000000; font-family: 'Courier New', Courier, monospace; box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.2); }
+.container.cow textarea { background: #f9f9f9; border: 2px solid #000; color: #000; }
+.container.cow .action-btn { background: #000; color: #fff; border: 2px solid #fff; border-radius: 5px; }
+
+.container.vending { background: #2f4f4f; border: 10px solid #a9a9a9; border-radius: 5px; color: #00ff00; font-family: 'Consolas', monospace; box-shadow: inset 0 0 20px #000; }
+.container.vending textarea { background: #000000; border: 2px solid #00ff00; color: #00ff00; text-transform: uppercase; }
+.container.vending .action-btn { background: #00ff00; color: #000; border: 4px solid #006400; border-radius: 2px; }
