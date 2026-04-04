@@ -43,7 +43,7 @@
 
 <style>
   .absurd-time-badge {
-    position: absolute;
+    position: fixed;
     top: 10px;
     right: 10px;
     background: #000;
@@ -53,9 +53,26 @@
     font-size: 1.1rem;
     border-radius: 5px;
     border: 2px solid cyan;
-    z-index: 1000;
+    z-index: 999;
     white-space: nowrap;
     text-shadow: 0 0 5px cyan;
     pointer-events: none;
+    max-width: calc(100vw - 200px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (max-width: 768px) {
+    .absurd-time-badge {
+      top: auto;
+      bottom: 70px;
+      right: 5px;
+      max-width: calc(100vw - 10px);
+      font-size: 0.6rem;
+      padding: 3px 6px;
+      white-space: normal;
+      text-align: right;
+      line-height: 1.3;
+    }
   }
 </style>

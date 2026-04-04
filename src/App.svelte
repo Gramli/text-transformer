@@ -26,6 +26,7 @@
   let isPlaying = false;
   let isFrozen = false;
   let comboPos = { top: 50, left: 50 };
+  let isTouchDevice = false;
   
   $: modeInfo = modes[curModeIdx];
   $: mode = modeInfo.id;
@@ -74,6 +75,11 @@
     setTimeout(() => (copied = false), 2000);
   }
 
+  function handleMobileTrigger() {
+    triggerShaking();
+    handleTransform();
+  }
+
   function playText() {
     if (isPlaying) {
       stopSpeaking();
@@ -94,6 +100,26 @@
       () => { isListening = false; }
     );
     initVoices();
+
+    isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+    // Shake-to-transform for mobile (Android + non-iOS 13+)
+    let lastShake = 0;
+    const SHAKE_THRESHOLD = 18;
+    const handleMotion = (e) => {
+      const acc = e.accelerationIncludingGravity;
+      if (!acc) return;
+      const mag = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
+      const now = Date.now();
+      if (mag > SHAKE_THRESHOLD && now - lastShake > 1500) {
+        lastShake = now;
+        triggerShaking();
+        handleTransform();
+      }
+    };
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission !== 'function') {
+      window.addEventListener('devicemotion', handleMotion);
+    }
 
     const premiumDelay = Math.floor(Math.random() * (180000 - 60000 + 1)) + 60000;
     const premiumTimeout = setTimeout(() => { showPremiumModal = true; }, premiumDelay);
@@ -124,6 +150,7 @@
       clearInterval(bgInterval);
       clearInterval(scamInterval);
       clearTimeout(premiumTimeout);
+      window.removeEventListener('devicemotion', handleMotion);
     };
   });
 </script>
@@ -177,10 +204,14 @@
     <header>
       <h1>{modeInfo.label}</h1>
       <p class="subtitle">{modeInfo.msg}</p>
-      <div class="secret-warning">
+      <div class="secret-warning desktop-warning">
         ⚠️ ONLY THE <b>SCROLL LOCK</b> KEY WILL TRANSFORM TEXT (or Insert) ⚠️<br/>
         Space and Enter are powerless here!<br/>
         🎙️ PRESS <b>PAUSE</b> FOR VOICE RECOGNITION 🎙️
+      </div>
+      <div class="secret-warning mobile-warning">
+        🤙 TAP THE BIG BUTTON BELOW TO TRANSFORM! 🤙<br/>
+        📳 OR SHAKE YOUR PHONE FOR MAXIMUM CHAOS!!!
       </div>
     </header>
 
@@ -195,6 +226,13 @@
       <div class="pane">
         <label for="input">Input (Normal): {#if isListening}<span class="listening-indicator">🔴 LISTENING...</span>{/if}</label>
         <textarea id="input" bind:value={inputText} placeholder="Type something normal here... Remember, NO AUTO-TRANSFORM!"></textarea>
+      </div>
+
+      <div class="mobile-transform-wrapper">
+        <button class="mobile-transform-btn" on:click={handleMobileTrigger}>
+          🤙 SMASH TO TRANSFORM 🤙
+        </button>
+        <div class="shake-hint-mobile">📳 OR SHAKE YOUR PHONE!!!</div>
       </div>
 
       <div class="pane output-pane">
@@ -457,4 +495,117 @@
   .action-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px #ff00ff; }
   .action-btn:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px #ff00ff; }
   .action-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
+
+  /* ── Mobile transform button (hidden on desktop, shown on touch devices) ──── */
+  .mobile-warning { display: none; }
+  .mobile-transform-wrapper {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+  }
+  .mobile-transform-btn {
+    width: 100%;
+    padding: 1.2rem;
+    font-size: 1.3rem;
+    font-weight: 900;
+    font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+    background: linear-gradient(135deg, #ff0066, #ff6600, #ffff00, #00cc00, #0066ff, #cc00ff);
+    background-size: 400% 400%;
+    animation: rainbow-btn 1.5s linear infinite;
+    color: white;
+    border: 5px solid black;
+    border-radius: 15px;
+    cursor: pointer;
+    box-shadow: 5px 5px 0px black;
+    text-shadow: 2px 2px 0px rgba(0,0,0,0.8);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .mobile-transform-btn:active {
+    transform: translate(3px, 3px);
+    box-shadow: 2px 2px 0px black;
+  }
+  @keyframes rainbow-btn {
+    0%   { background-position: 0%   50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0%   50%; }
+  }
+  .shake-hint-mobile {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #ff00ff;
+    text-shadow: 1px 1px 0 black;
+    background: yellow;
+    padding: 3px 8px;
+    border: 2px dashed black;
+    border-radius: 5px;
+    animation: blink 0.8s infinite alternate;
+  }
+
+  /* Touch devices: swap hints & show mobile button */
+  @media (pointer: coarse) {
+    .desktop-warning { display: none; }
+    .mobile-warning { display: block; }
+    .mobile-transform-wrapper { display: flex; }
+  }
+
+  /* ── Responsive layout ─────────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .container { max-width: 98vw; }
+  }
+
+  @media (max-width: 768px) {
+    main {
+      align-items: flex-start;
+      padding: 0.75rem;
+      padding-top: 80px;
+      padding-bottom: 90px;
+    }
+    .manual-btn {
+      font-size: 1rem;
+      padding: 6px 10px;
+      border-width: 3px;
+      box-shadow: 3px 3px 0px black;
+    }
+    .cheats-trigger-btn {
+      font-size: 1rem;
+      padding: 8px 10px;
+      border-width: 3px;
+    }
+    .womm-btn {
+      font-size: 0.8rem;
+      padding: 6px 10px;
+      border-width: 3px;
+    }
+    /* override random inline position so picker is always reachable */
+    .lang-picker {
+      top: 5rem !important;
+      left: 50% !important;
+      transform: translateX(-50%) rotate(-2deg) !important;
+    }
+    .lang-picker select { max-width: 160px; }
+    .container { padding: 0.75rem; border-radius: 0.5rem; }
+    header h1 { font-size: 1.6rem; }
+    .subtitle { font-size: 1rem; }
+    .secret-warning { font-size: 0.75rem; padding: 0.4rem; }
+    .toggle-container { margin-bottom: 1rem; }
+    .cycle-btn { font-size: 1rem; padding: 0.7rem 1.2rem; }
+    .mode-label { font-size: 0.95rem; }
+    label { font-size: 1rem; }
+    textarea { height: 100px; font-size: 1rem; }
+    .output-pane { padding-bottom: 3.5rem; }
+    .action-btn { font-size: 0.9rem; padding: 0.4rem 0.9rem; }
+  }
+
+  @media (max-width: 480px) {
+    main {
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+      padding-top: 70px;
+    }
+    header h1 { font-size: 1.2rem; }
+    .container { padding: 0.5rem; }
+    textarea { height: 80px; }
+  }
 </style>
