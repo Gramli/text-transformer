@@ -46,6 +46,7 @@ The Absurd Text Transformer takes normal text and ruins it — beautifully. It o
 - **Scam Modal** — randomly-timed "YOU HAVE WON" pop-ups
 - **Premium Upsell Modal** — fake $499 token purchases (floppy disk payments only)
 - **Absurd Time Badge** — displays the current time in a random obscure timezone
+- **Anti-Paste Punisher** — blocks Ctrl+V with a massive Gandalf overlay and fiery Balrog pit
 - **Keyboard-only transform** — `Scroll Lock` / `Insert` to transform, `Pause` for voice input
 
 ---
@@ -122,7 +123,8 @@ src/
 │   ├── PremiumModal.svelte # Fake premium upsell
 │   ├── AbsurdTimeBadge.svelte  # Timezone badge
 │   ├── EvilClippy.svelte   # Annoying floating paperclip
-│   └── CursorTrails.svelte # 90s cursor particle effects
+│   ├── CursorTrails.svelte # 90s cursor particle effects
+│   └── GandalfBlocker.svelte # Anti-Paste Punisher overlay
 ```
 
 ---

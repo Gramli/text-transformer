@@ -10,6 +10,7 @@
   import CheatsModal from "./lib/CheatsModal.svelte";
   import EvilClippy from "./lib/EvilClippy.svelte";
   import CursorTrails from "./lib/CursorTrails.svelte";
+  import GandalfBlocker from "./lib/GandalfBlocker.svelte";
 
   // ── Constants ──────────────────────────────────────────
   const SHAKE_THRESHOLD = 18;
@@ -20,6 +21,21 @@
   const SCAM_INTERVAL_MIN_MS = 20_000;
   const SCAM_INTERVAL_RANGE_MS = 20_000;
   const BG_CYCLE_MS = 1500;
+
+  const DEVELOPER_EXCUSES = [
+    "Works on my machine. Did you try turning your aura off and on again?",
+    "I didn't test it, but I'm 100% sure it's a DNS issue.",
+    "Wait, are you using Chrome? Oh, it only works in Netscape Navigator.",
+    "Have you tried deleting node_modules and rethinking your life choices?",
+    "It compiled fine on my end. Have you reinstalled Windows?",
+    "That's not a bug, it's an undocumented surprise feature.",
+    "I literally changed one CSS class, how did the whole database drop?",
+    "It works perfectly in my mind.",
+    "Please clear your cache, your cookies, and your karma.",
+    "We don't support users who find bugs.",
+    "Did you try blowing on the cartridge?",
+    "The code is compiling. It just takes a few years."
+  ];
 
   // ── State ──────────────────────────────────────────────
   let inputText = "";
@@ -32,12 +48,15 @@
   let isListening = false;
   let isPlaying = false;
   let isFrozen = false;
+  let currentExcuse = "";
 
   let showPremiumModal = false;
   let showScamModal = false;
   let showManual = false;
   let showCheats = false;
   let currentScam = null;
+  let showGandalf = false;
+  let pastedTextGandalf = "";
 
   let comboPos = { top: 50, left: 50 };
 
@@ -70,6 +89,19 @@
       event.preventDefault();
       isListening = toggleListening(isListening);
     }
+  }
+
+  function handlePaste(event) {
+    event.preventDefault();
+    const clipData = event.clipboardData || window.clipboardData;
+    const text = clipData ? clipData.getData('text') : "";
+    pastedTextGandalf = text || "[ REDACTED CHAOS ]";
+    showGandalf = true;
+  }
+
+  function triggerWOMM() {
+    currentExcuse = DEVELOPER_EXCUSES[Math.floor(Math.random() * DEVELOPER_EXCUSES.length)];
+    isFrozen = true;
   }
 
   function cycleMode() {
@@ -188,11 +220,15 @@
   });
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<svelte:window on:keydown={handleKeydown} on:paste={handlePaste} />
 
 <svelte:head>
   <title>The Absurd Text Transformer 🦄</title>
 </svelte:head>
+
+{#if showGandalf}
+  <GandalfBlocker pastedText={pastedTextGandalf} on:close={() => showGandalf = false} />
+{/if}
 
 <main style="background-color: {currentBg}; transition: background-color 0.5s ease; min-height: 100vh;">
   <div class="manual-btn-container">
@@ -222,13 +258,19 @@
   </div>
 
   <div class="womm-btn-wrapper">
-    <button class="womm-btn" on:click={() => isFrozen = true}>Works on My Machine</button>
+    <button class="womm-btn" on:click={triggerWOMM}>Works on My Machine</button>
   </div>
 
   {#if isFrozen}
     <div class="freeze-overlay" on:click={() => isFrozen = false}>
-      <div class="freeze-message">
-        Works on my machine.
+      <div class="bsod-content">
+        <div class="bsod-title">A fatal exception 0E has occurred at 0xDEADBEEF in 0x00000000.</div>
+        <div class="bsod-excuse">*** {currentExcuse}</div>
+        <div class="bsod-instructions">
+          * Press any key to terminate the current application.<br>
+          * Press CTRL+ALT+DEL again to restart your computer. You will lose any unsaved information in all applications.
+        </div>
+        <div class="bsod-prompt">Press any key to continue _</div>
       </div>
     </div>
   {/if}
@@ -390,18 +432,43 @@
     justify-content: center;
     cursor: crosshair;
   }
-  .freeze-message {
+  .bsod-content {
     color: #fff;
-    padding: 40px;
     font-family: 'Courier New', Courier, monospace;
-    font-size: 4rem;
-    font-weight: bold;
+    font-size: 1.2rem;
     pointer-events: none;
     user-select: none;
+    text-align: left;
+    max-width: 600px;
+    width: 90%;
+  }
+  .bsod-title {
     text-align: center;
-    border: none;
-    background: transparent;
-    box-shadow: none;
+    background: #fff;
+    color: #0000aa;
+    display: inline-block;
+    margin: 0 auto 30px auto;
+    padding: 0 10px;
+    font-weight: bold;
+    margin-left: 50%;
+    transform: translateX(-50%);
+  }
+  .bsod-excuse {
+    margin-bottom: 30px;
+    font-weight: bold;
+    color: #fff;
+  }
+  .bsod-instructions {
+    margin-bottom: 30px;
+    line-height: 1.6;
+  }
+  .bsod-prompt {
+    text-align: center;
+    animation: blink 1s infinite;
+  }
+  @keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
   }
 
   /* ── Container & content ──────────────────────────────────── */
