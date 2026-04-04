@@ -11,50 +11,72 @@
   import EvilClippy from "./lib/EvilClippy.svelte";
   import CursorTrails from "./lib/CursorTrails.svelte";
 
+  // ── Constants ──────────────────────────────────────────
+  const SHAKE_THRESHOLD = 18;
+  const SHAKE_COOLDOWN_MS = 1500;
+  const SHAKING_DURATION_MS = 500;
+  const PREMIUM_DELAY_MIN_MS = 60_000;
+  const PREMIUM_DELAY_MAX_MS = 180_000;
+  const SCAM_INTERVAL_MIN_MS = 20_000;
+  const SCAM_INTERVAL_RANGE_MS = 20_000;
+  const BG_CYCLE_MS = 1500;
+
+  // ── State ──────────────────────────────────────────────
   let inputText = "";
   let transformedText = "";
+  let curModeIdx = 0;
+  let bgIndex = 0;
+
   let copied = false;
   let isTransforming = false;
+  let isListening = false;
+  let isPlaying = false;
+  let isFrozen = false;
+
   let showPremiumModal = false;
   let showScamModal = false;
   let showManual = false;
   let showCheats = false;
   let currentScam = null;
-  let bgIndex = 0;
-  let curModeIdx = 0;
-  let isListening = false;
-  let isPlaying = false;
-  let isFrozen = false;
+
   let comboPos = { top: 50, left: 50 };
-  let isTouchDevice = false;
-  
+
+  // ── Derived ────────────────────────────────────────────
   $: modeInfo = modes[curModeIdx];
   $: mode = modeInfo.id;
   $: currentBg = modeInfo.bgColors ? modeInfo.bgColors[bgIndex] : modeInfo.bgColor;
 
-  function handleKeydown(event) {
-    if (event.key === "ScrollLock" || event.key === "Insert") {
-      event.preventDefault();
-      triggerShaking();
-      handleTransform();
-    } else if (event.key === "Pause") {
-      event.preventDefault();
-      isListening = toggleListening(isListening);
-    }
-  }
-
+  // ── Core actions ───────────────────────────────────────
   function triggerShaking() {
     isTransforming = true;
-    setTimeout(() => isTransforming = false, 500);
+    setTimeout(() => (isTransforming = false), SHAKING_DURATION_MS);
   }
 
   function handleTransform() {
     transformedText = modeInfo.transform(inputText);
   }
 
+  function transformWithShake() {
+    triggerShaking();
+    handleTransform();
+  }
+
+  // ── Input handlers ─────────────────────────────────────
+  function handleKeydown(event) {
+    if (event.key === "ScrollLock" || event.key === "Insert") {
+      event.preventDefault();
+      transformWithShake();
+    } else if (event.key === "Pause") {
+      event.preventDefault();
+      isListening = toggleListening(isListening);
+    }
+  }
+
   function cycleMode() {
     let newIdx;
-    do { newIdx = Math.floor(Math.random() * modes.length); } while (newIdx === curModeIdx);
+    do {
+      newIdx = Math.floor(Math.random() * modes.length);
+    } while (newIdx === curModeIdx);
     curModeIdx = newIdx;
     transformedText = "";
     triggerShaking();
@@ -75,11 +97,6 @@
     setTimeout(() => (copied = false), 2000);
   }
 
-  function handleMobileTrigger() {
-    triggerShaking();
-    handleTransform();
-  }
-
   function playText() {
     if (isPlaying) {
       stopSpeaking();
@@ -91,6 +108,65 @@
     speakText(transformedText, mode, () => { isPlaying = false; });
   }
 
+  // ── Setup helpers (each returns its own cleanup) ───────
+  function pickRandomEdgeZone() {
+    const zones = [
+      { top: 10 + Math.random() * 15, left: 5 + Math.random() * 20 },
+      { top: 10 + Math.random() * 15, left: 70 + Math.random() * 20 },
+      { top: 75 + Math.random() * 15, left: 5 + Math.random() * 20 },
+      { top: 75 + Math.random() * 15, left: 70 + Math.random() * 20 },
+    ];
+    return zones[Math.floor(Math.random() * zones.length)];
+  }
+
+  function setupShakeDetection() {
+    let lastShake = 0;
+    const onMotion = (e) => {
+      const acc = e.accelerationIncludingGravity;
+      if (!acc) return;
+      const mag = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
+      if (mag > SHAKE_THRESHOLD && Date.now() - lastShake > SHAKE_COOLDOWN_MS) {
+        lastShake = Date.now();
+        transformWithShake();
+      }
+    };
+    const supported =
+      typeof DeviceMotionEvent !== "undefined" &&
+      typeof DeviceMotionEvent.requestPermission !== "function";
+    if (supported) window.addEventListener("devicemotion", onMotion);
+    return () => window.removeEventListener("devicemotion", onMotion);
+  }
+
+  function setupScheduledPopups() {
+    const premiumDelay =
+      PREMIUM_DELAY_MIN_MS +
+      Math.floor(Math.random() * (PREMIUM_DELAY_MAX_MS - PREMIUM_DELAY_MIN_MS + 1));
+    const premiumTimeout = setTimeout(() => { showPremiumModal = true; }, premiumDelay);
+
+    const scamDelay = SCAM_INTERVAL_MIN_MS + Math.floor(Math.random() * SCAM_INTERVAL_RANGE_MS);
+    const scamInterval = setInterval(() => {
+      if (!showPremiumModal) {
+        currentScam = scams[Math.floor(Math.random() * scams.length)];
+        showScamModal = true;
+      }
+    }, scamDelay);
+
+    return () => {
+      clearTimeout(premiumTimeout);
+      clearInterval(scamInterval);
+    };
+  }
+
+  function setupBgCycling() {
+    const interval = setInterval(() => {
+      if (modeInfo.bgColors) {
+        bgIndex = (bgIndex + 1) % modeInfo.bgColors.length;
+      }
+    }, BG_CYCLE_MS);
+    return () => clearInterval(interval);
+  }
+
+  // ── Lifecycle ──────────────────────────────────────────
   onMount(() => {
     initSpeechRecognition(
       (transcript) => {
@@ -101,57 +177,14 @@
     );
     initVoices();
 
-    isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    comboPos = pickRandomEdgeZone();
 
-    // Shake-to-transform for mobile (Android + non-iOS 13+)
-    let lastShake = 0;
-    const SHAKE_THRESHOLD = 18;
-    const handleMotion = (e) => {
-      const acc = e.accelerationIncludingGravity;
-      if (!acc) return;
-      const mag = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
-      const now = Date.now();
-      if (mag > SHAKE_THRESHOLD && now - lastShake > 1500) {
-        lastShake = now;
-        triggerShaking();
-        handleTransform();
-      }
-    };
-    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission !== 'function') {
-      window.addEventListener('devicemotion', handleMotion);
-    }
-
-    const premiumDelay = Math.floor(Math.random() * (180000 - 60000 + 1)) + 60000;
-    const premiumTimeout = setTimeout(() => { showPremiumModal = true; }, premiumDelay);
-
-    const scamInterval = setInterval(() => {
-      if (!showPremiumModal) {
-        currentScam = scams[Math.floor(Math.random() * scams.length)];
-        showScamModal = true;
-      }
-    }, Math.floor(Math.random() * 20000) + 20000);
-
-    // Random position for language combobox — avoid dead center, stay in edge zones
-    const edgeZones = [
-      { top: 10 + Math.random() * 15, left: 5 + Math.random() * 20 },
-      { top: 10 + Math.random() * 15, left: 70 + Math.random() * 20 },
-      { top: 75 + Math.random() * 15, left: 5 + Math.random() * 20 },
-      { top: 75 + Math.random() * 15, left: 70 + Math.random() * 20 },
+    const cleanups = [
+      setupShakeDetection(),
+      setupScheduledPopups(),
+      setupBgCycling(),
     ];
-    comboPos = edgeZones[Math.floor(Math.random() * edgeZones.length)];
-
-    const bgInterval = setInterval(() => {
-      if (modeInfo.bgColors) {
-        bgIndex = (bgIndex + 1) % modeInfo.bgColors.length;
-      }
-    }, 1500);
-    
-    return () => {
-      clearInterval(bgInterval);
-      clearInterval(scamInterval);
-      clearTimeout(premiumTimeout);
-      window.removeEventListener('devicemotion', handleMotion);
-    };
+    return () => cleanups.forEach((fn) => fn());
   });
 </script>
 
@@ -229,7 +262,7 @@
       </div>
 
       <div class="mobile-transform-wrapper">
-        <button class="mobile-transform-btn" on:click={handleMobileTrigger}>
+        <button class="mobile-transform-btn" on:click={transformWithShake}>
           🤙 SMASH TO TRANSFORM 🤙
         </button>
         <div class="shake-hint-mobile">📳 OR SHAKE YOUR PHONE!!!</div>
@@ -257,6 +290,7 @@
 </main>
 
 <style>
+  /* ── Reset & layout ──────────────────────────────────────────── */
   :global(body) {
     margin: 0;
     padding: 0;
@@ -264,6 +298,7 @@
   }
   main { display: flex; justify-content: center; align-items: center; padding: 2rem; box-sizing: border-box; }
   
+  /* ── Animations ────────────────────────────────────────────── */
   @keyframes shake {
     0% { transform: translate(1px, 1px) rotate(0deg); }
     10% { transform: translate(-2px, -2px) rotate(-1deg); }
@@ -282,6 +317,7 @@
     animation-iteration-count: 2;
   }
 
+  /* ── Fixed UI elements ─────────────────────────────────────── */
   .lang-picker {
     position: fixed;
     z-index: 1001;
@@ -368,6 +404,7 @@
     box-shadow: none;
   }
 
+  /* ── Container & content ──────────────────────────────────── */
   .container { background: rgba(255, 255, 255, 0.9); padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-width: 800px; width: 100%; position: relative; transition: all 0.3s ease; }
 
   .manual-btn-container {
@@ -421,55 +458,48 @@
     color: #ff0;
   }
 
-  /* Yoda */
+  /* ── Mode themes ──────────────────────────────────────────── */
   .container.yoda { background: rgba(10, 25, 47, 0.95); color: #64ffda; font-family: 'Courier New', Courier, monospace; border: 2px solid #64ffda; box-shadow: 0 0 20px rgba(100, 255, 218, 0.2); }
   .container.yoda textarea { background: #112240; color: #ccd6f6; border: 1px solid #64ffda; }
-  .container.yoda .action-btn { background: #64ffda; color: #0a192f; border: none; font-family: inherit; }
+  .container.yoda .action-btn { background: #64ffda; color: #0a192f; border: none; }
   .container.yoda .action-btn:hover { background: #52e0c4; transform: scale(1.05); }
   
-  /* Pirate */
   .container.pirate { background: #ab8654; background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.1), rgba(0,0,0,0.1) 10px, transparent 10px, transparent 20px); border: 5px dashed #4e3512; color: #2b1d0c; font-family: 'Times New Roman', Times, serif; box-shadow: inset 0 0 20px #4e3512; }
   .container.pirate textarea { background: #e6d3a6; border: 2px dashed #4e3512; color: #4e3512; font-family: 'Cursive', serif; font-weight: bold; }
-  .container.pirate .action-btn { background: #ffd700; color: #000; border: 3px solid #b8860b; border-radius: 5px; font-family: inherit; }
+  .container.pirate .action-btn { background: #ffd700; color: #000; border: 3px solid #b8860b; border-radius: 5px; }
   
-  /* Baby */
   .container.baby { background: #ffe6f2; border: 10px solid #cce6ff; border-radius: 40px; color: #ff66a3; font-family: 'Comic Sans MS', cursive, sans-serif; box-shadow: 0 0 30px #ffb3d9; }
-  .container.baby textarea { background: #fff; border: 3px dotted #ff99c2; border-radius: 20px; font-family: inherit; color: #ff66a3; }
-  .container.baby .action-btn { background: #cce6ff; color: #ff66a3; border: 2px solid #ff99c2; border-radius: 20px; font-family: inherit; }
+  .container.baby textarea { background: #fff; border: 3px dotted #ff99c2; border-radius: 20px; color: #ff66a3; }
+  .container.baby .action-btn { background: #cce6ff; color: #ff66a3; border: 2px solid #ff99c2; border-radius: 20px; }
 
-  /* Cat */
   .container.cat { background: repeating-linear-gradient(90deg, #ff9900, #ff9900 20px, #000 20px, #000 40px); color: #fff; border: 5px solid #ff9900; font-family: 'Impact', sans-serif; position: relative; }
   .container.cat::before { content: ''; position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.5); z-index: 0; }
   .container.cat > * { position: relative; z-index: 1; }
-  .container.cat textarea { background: rgba(255,255,255,0.9); color: #000; border: 3px dashed #ff9900; font-family: inherit; }
+  .container.cat textarea { background: rgba(255,255,255,0.9); color: #000; border: 3px dashed #ff9900; }
   .container.cat .action-btn { background: #ff9900; color: #000; border: 2px solid #fff; border-radius: 50%; min-width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; }
   .container.cat .action-btn:hover { transform: scale(1.2) rotate(15deg); }
 
-  /* Dog */
   .container.dog { background: #d2b48c; border: 8px solid #8b4513; border-radius: 20px; color: #4a2511; font-family: 'Georgia', serif; position: relative; box-shadow: inset 0 0 15px rgba(139, 69, 19, 0.5); }
-  .container.dog textarea { background: #fff8dc; border: 3px dashed #8b4513; color: #4a2511; font-family: inherit; }
-  .container.dog .action-btn { background: #8b4513; color: #fff8dc; border: 3px solid #5a2e0b; border-radius: 15px; font-family: inherit; }
+  .container.dog textarea { background: #fff8dc; border: 3px dashed #8b4513; color: #4a2511; }
+  .container.dog .action-btn { background: #8b4513; color: #fff8dc; border: 3px solid #5a2e0b; border-radius: 15px; }
 
-  /* Hamster */
   .container.hamster { background: #ffebcd; border: 6px dotted #d2691e; border-radius: 50px; color: #a0522d; font-family: 'Verdana', sans-serif; position: relative; box-shadow: 0 0 25px rgba(210, 105, 30, 0.4); }
-  .container.hamster textarea { background: #fff; border: 4px solid #cd853f; color: #8b4513; font-family: inherit; border-radius: 25px; }
-  .container.hamster .action-btn { background: #d2691e; color: #fff; border: 2px dashed #ffebcd; border-radius: 25px; font-family: inherit; }
+  .container.hamster textarea { background: #fff; border: 4px solid #cd853f; color: #8b4513; border-radius: 25px; }
+  .container.hamster .action-btn { background: #d2691e; color: #fff; border: 2px dashed #ffebcd; border-radius: 25px; }
 
-  /* Duck */
   .container.duck { background: #fffacd; border: 5px solid #ffaa00; border-radius: 20px; color: #cc5500; font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif; box-shadow: 0 0 15px rgba(255, 170, 0, 0.5); }
-  .container.duck textarea { background: #fffdf0; border: 3px dashed #ffaa00; color: #cc5500; font-family: inherit; }
-  .container.duck .action-btn { background: #ffaa00; color: #fff; border: 3px solid #e69900; border-radius: 10px; font-family: inherit; }
+  .container.duck textarea { background: #fffdf0; border: 3px dashed #ffaa00; color: #cc5500; }
+  .container.duck .action-btn { background: #ffaa00; color: #fff; border: 3px solid #e69900; border-radius: 10px; }
 
-  /* Cow */
   .container.cow { background: #ffffff; border: 8px dashed #000000; border-radius: 10px; color: #000000; font-family: 'Courier New', Courier, monospace; box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.2); }
-  .container.cow textarea { background: #f9f9f9; border: 2px solid #000; color: #000; font-family: inherit; }
-  .container.cow .action-btn { background: #000; color: #fff; border: 2px solid #fff; border-radius: 5px; font-family: inherit; }
+  .container.cow textarea { background: #f9f9f9; border: 2px solid #000; color: #000; }
+  .container.cow .action-btn { background: #000; color: #fff; border: 2px solid #fff; border-radius: 5px; }
 
-  /* Vending Machine */
   .container.vending { background: #2f4f4f; border: 10px solid #a9a9a9; border-radius: 5px; color: #00ff00; font-family: 'Consolas', monospace; box-shadow: inset 0 0 20px #000; }
-  .container.vending textarea { background: #000000; border: 2px solid #00ff00; color: #00ff00; font-family: inherit; text-transform: uppercase; }
-  .container.vending .action-btn { background: #00ff00; color: #000; border: 4px solid #006400; border-radius: 2px; font-family: inherit; }
+  .container.vending textarea { background: #000000; border: 2px solid #00ff00; color: #00ff00; text-transform: uppercase; }
+  .container.vending .action-btn { background: #00ff00; color: #000; border: 4px solid #006400; border-radius: 2px; }
 
+  /* ── Header, toggle & IO ─────────────────────────────────── */
   header { text-align: center; margin-bottom: 1.5rem; }
   header h1 { font-size: 2.5rem; margin: 0; text-transform: uppercase; }
   .subtitle { font-size: 1.2rem; font-weight: bold; }
