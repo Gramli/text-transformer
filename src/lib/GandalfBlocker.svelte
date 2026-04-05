@@ -11,6 +11,12 @@
     }
   }
 
+  function handleTouch() {
+    dispatch('close');
+  }
+
+  const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
   onMount(() => {
     window.addEventListener('keydown', handleKeydown);
     return () => {
@@ -19,12 +25,12 @@
   });
 </script>
 
-<div class="gandalf-overlay" transition:fade={{ duration: 300 }}>
+<div class="gandalf-overlay" transition:fade={{ duration: 300 }} on:touchstart={handleTouch}>
   <div class="white-flash"></div>
   <div class="gandalf-container">
     <h1 class="gandalf-text">YOU SHALL NOT PASTE!</h1>
     <div class="gandalf-image">🧙‍♂️</div>
-    <p class="apologize-text">Hit [ ESC ] to apologize.</p>
+    <p class="apologize-text">{isTouchDevice ? 'Tap screen to apologize.' : 'Hit [ ESC ] to apologize.'}</p>
   </div>
   
   <div class="balrog-pit">
