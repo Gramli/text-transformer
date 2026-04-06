@@ -2,8 +2,8 @@
   import { onMount } from "svelte";
   import { modes } from "./lib/transformers.js";
   import { scams } from "./lib/scamData.js";
-  import { badges, inflateBadge } from "./lib/badgeData.js";
-  import { getRandomFormattedText } from "./lib/socialTemplates.js";
+  import { badgeStore } from "./lib/badgeStore.js";
+  import { copyToClipboard } from "./lib/clipboard.js";
   import { initSpeechRecognition, initVoices, toggleListening, speakText, stopSpeaking } from "./lib/speechService.js";
   import {
     SHAKE_THRESHOLD, SHAKE_COOLDOWN_MS, SHAKING_DURATION_MS,
@@ -22,18 +22,19 @@
   import BadgeToast from "./lib/BadgeToast.svelte";
   import BadgesProfileModal from "./lib/BadgesProfileModal.svelte";
   import PrestigeModal from "./lib/PrestigeModal.svelte";
+  import SpreadChaos from "./lib/SpreadChaos.svelte";
 
-  // ── State ──────────────────────────────────────────────
+  // ── State: transformer ─────────────────────────────────
   let inputText = "";
   let transformedText = "";
   let curModeIdx = 0;
   let bgIndex = 0;
-
   let copied = false;
   let isTransforming = false;
   let isListening = false;
   let isPlaying = false;
 
+  // ── State: modals ──────────────────────────────────────
   let showPremiumModal = false;
   let showScamModal = false;
   let showManual = false;
@@ -41,17 +42,14 @@
   let showBSOD = false;
   let showGandalf = false;
   let showBadgesProfile = false;
-  let showPrestigeModal = false;
 
+  // ── State: misc ────────────────────────────────────────
   let currentScam = null;
   let pastedTextGandalf = "";
   let comboPos = { top: 50, left: 50 };
-  let specialCopyState = "";
 
-  let stats = { visits: 0, transforms: 0, prestigeLevel: 0 };
-  let earnedBadgeIds = [];
-  let recentBadge = null;
-  let badgeTimeout;
+  // ── Badge store subscriptions ──────────────────────────
+  const { stats, earnedIds, recentBadge, showPrestige, recordVisit, recordTransform } = badgeStore;
 
   // ── Derived ────────────────────────────────────────────
   $: modeInfo = modes[curModeIdx];
@@ -66,42 +64,12 @@
 
   function handleTransform() {
     transformedText = modeInfo.transform(inputText);
-    stats.transforms += 1;
-    localStorage.setItem("absurdStats", JSON.stringify(stats));
-    checkBadges("transform");
+    recordTransform();
   }
 
   function transformWithShake() {
     triggerShaking();
     handleTransform();
-  }
-
-  function checkBadges(triggerType) {
-    const val = triggerType === 'visit' ? stats.visits : stats.transforms;
-    const currentPrestige = stats.prestigeLevel || 0;
-    
-    // Inflate limits based on current prestige
-    const newlyEarned = badges.map(b => inflateBadge(b, currentPrestige))
-      .filter(b => b.type === triggerType && b.limit <= val && !earnedBadgeIds.includes(b.id));
-    
-    if (newlyEarned.length > 0) {
-      newlyEarned.forEach(b => earnedBadgeIds.push(b.id));
-      earnedBadgeIds = earnedBadgeIds; // trigger reactivity
-      localStorage.setItem("absurdBadges", JSON.stringify(earnedBadgeIds));
-      
-      recentBadge = newlyEarned[newlyEarned.length - 1];
-      clearTimeout(badgeTimeout);
-      badgeTimeout = setTimeout(() => { recentBadge = null; }, 5000);
-      
-      // Check for prestige unlock
-      if (earnedBadgeIds.length >= badges.length) {
-        stats.prestigeLevel = (stats.prestigeLevel || 0) + 1;
-        earnedBadgeIds = []; // Reset earned badge IDs
-        localStorage.setItem("absurdStats", JSON.stringify(stats));
-        localStorage.setItem("absurdBadges", JSON.stringify(earnedBadgeIds));
-        showPrestigeModal = true;
-      }
-    }
   }
 
   // ── Input handlers ─────────────────────────────────────
@@ -143,9 +111,11 @@
   }
 
   function copyText() {
-    navigator.clipboard.writeText(transformedText);
-    copied = true;
-    setTimeout(() => (copied = false), 2000);
+    copyToClipboard(
+      transformedText,
+      () => { copied = true; },
+      () => { copied = false; }
+    );
   }
 
   function playText() {
@@ -157,16 +127,6 @@
     if (!transformedText) return;
     isPlaying = true;
     speakText(transformedText, mode, () => { isPlaying = false; });
-  }
-
-  function copySpecialFormat(type) {
-    if (!transformedText) return;
-    
-    const result = getRandomFormattedText(type, transformedText);
-    
-    navigator.clipboard.writeText(result);
-    specialCopyState = type;
-    setTimeout(() => (specialCopyState = ""), 2000);
   }
 
   // ── Setup helpers (each returns its own cleanup) ───────
@@ -229,14 +189,7 @@
 
   // ── Lifecycle ──────────────────────────────────────────
   onMount(() => {
-    // Badges initialization
-    const savedStats = JSON.parse(localStorage.getItem("absurdStats") || '{"visits":0, "transforms":0, "prestigeLevel":0}');
-    const savedBadges = JSON.parse(localStorage.getItem("absurdBadges") || '[]');
-    savedStats.visits += 1;
-    stats = savedStats;
-    earnedBadgeIds = savedBadges;
-    localStorage.setItem("absurdStats", JSON.stringify(stats));
-    checkBadges("visit");
+    recordVisit();
 
     initSpeechRecognition(
       (transcript) => {
@@ -275,7 +228,7 @@
 
   <div class="profile-btn-container">
     <button class="profile-btn" on:click={() => showBadgesProfile = true}>
-      🏆 DEV Badges ({earnedBadgeIds.length}) {#if stats.prestigeLevel > 0}<br/><small>Prestige {stats.prestigeLevel}</small>{/if}
+      🏆 DEV Badges ({$earnedIds.length}) {#if $stats.prestigeLevel > 0}<br/><small>Prestige {$stats.prestigeLevel}</small>{/if}
     </button>
   </div>
   
@@ -285,9 +238,9 @@
 
   <ManualModal bind:visible={showManual} />
   <CheatsModal bind:visible={showCheats} />
-  <BadgeToast badge={recentBadge} />
-  <BadgesProfileModal bind:visible={showBadgesProfile} {earnedBadgeIds} prestigeLevel={stats.prestigeLevel} />
-  <PrestigeModal bind:visible={showPrestigeModal} prestigeLevel={stats.prestigeLevel} />
+  <BadgeToast badge={$recentBadge} />
+  <BadgesProfileModal bind:visible={showBadgesProfile} earnedBadgeIds={$earnedIds} prestigeLevel={$stats.prestigeLevel} />
+  <PrestigeModal bind:visible={$showPrestige} prestigeLevel={$stats.prestigeLevel} />
   <AbsurdTimeBadge />
   <PremiumModal visible={showPremiumModal} />
   <ScamModal bind:visible={showScamModal} scam={currentScam} />
@@ -363,23 +316,7 @@
         </div>
       </div>
 
-      <div class="formatting-section">
-        <h3>✨ SPREAD THE CHAOS ✨</h3>
-        <div class="format-buttons">
-          <button class="fmt-btn devto" disabled={!transformedText} on:click={() => copySpecialFormat('devto')}>
-            {specialCopyState === 'devto' ? 'COPIED 🚀' : '👨‍💻 dev.to Quick Post'}
-          </button>
-          <button class="fmt-btn linkedin" disabled={!transformedText} on:click={() => copySpecialFormat('linkedin')}>
-            {specialCopyState === 'linkedin' ? 'SYNERGIZED 💼' : '💼 LinkedIn Post'}
-          </button>
-          <button class="fmt-btn teams" disabled={!transformedText} on:click={() => copySpecialFormat('teams')}>
-            {specialCopyState === 'teams' ? 'CIRCLED BACK 🤝' : '🤝 Teams Message'}
-          </button>
-          <button class="fmt-btn recruiter" disabled={!transformedText} on:click={() => copySpecialFormat('recruiter')}>
-            {specialCopyState === 'recruiter' ? 'DECLINED 🏃' : '🏃 Respond to Recruiter'}
-          </button>
-        </div>
-      </div>
+      <SpreadChaos {transformedText} />
     </div>
   </div>
 </main>
@@ -579,63 +516,6 @@
   .action-btn:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px #ff00ff; }
   .action-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
 
-  /* ── Formatting section ──────────────────────────────────── */
-  .formatting-section {
-    margin-top: 1rem;
-    text-align: center;
-    border: 3px double #00ffff;
-    padding: 1rem;
-    background: rgba(255,192,203,0.5);
-    border-radius: 10px;
-  }
-  .formatting-section h3 {
-    margin: 0 0 1rem 0;
-    font-size: 1.5rem;
-    color: #ff00ff;
-    text-shadow: 1px 1px 0px black;
-    transform: rotate(-1deg);
-  }
-  .format-buttons {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.8rem;
-    align-items: center;
-  }
-  .fmt-btn {
-    flex: 1;
-    min-width: 200px;
-    padding: 0.8rem;
-    font-family: inherit;
-    font-size: 1.2rem;
-    font-weight: 900;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: 4px solid black;
-    box-shadow: 4px 4px 0 black;
-  }
-  .fmt-btn:active {
-    transform: translate(2px, 2px);
-    box-shadow: 2px 2px 0 black;
-  }
-  .fmt-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-    box-shadow: none;
-    transform: none;
-  }
-  
-  .fmt-btn.devto { background: #000000; color: #ffffff; border-color: #00ff00; }
-  .fmt-btn.linkedin { background: #0077b5; color: #ffffff; border-color: #ffff00; }
-  .fmt-btn.teams { background: #6264a7; color: #ffffff; border-color: #ff00ff; }
-  .fmt-btn.recruiter { background: #ff4500; color: #ffffff; border-color: #00ffff; }
-
-  .fmt-btn:hover:not(:disabled) {
-    transform: rotate(2deg) scale(1.05);
-  }
-
   /* ── Mobile transform button (hidden on desktop, shown on touch devices) ──── */
   .mobile-warning { display: none; }
   .mobile-transform-wrapper {
@@ -742,10 +622,6 @@
     textarea { height: 100px; font-size: 1rem; }
     .output-pane { padding-bottom: 3.5rem; }
     .action-btn { font-size: 0.9rem; padding: 0.4rem 0.9rem; }
-    
-    .formatting-section { padding: 0.5rem; margin-top: 0.5rem; }
-    .formatting-section h3 { font-size: 1.2rem; }
-    .fmt-btn { width: 90%; min-width: auto; padding: 0.6rem; font-size: 1rem; border-width: 3px; box-shadow: 3px 3px 0 black; }
   }
 
   @media (max-width: 480px) {
