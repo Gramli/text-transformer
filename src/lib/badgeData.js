@@ -101,3 +101,21 @@ export const badges = [
   ...badge,
   rarity: rarities[Math.floor(Math.random() * rarities.length)]
 }));
+
+export function inflateBadge(badge, prestigeLevel) {
+  if (!prestigeLevel || prestigeLevel < 1) return badge;
+  
+  const prefixes = ["Super", "Ultra", "Galactic", "Quantum", "Hyper", "Ascended", "God-Tier"];
+  const suffixes = ["Pro Max", "Plus Ultra", "Visionary", "Architect", "Mastermind", "Overlord", "Supreme"];
+  
+  const prefix = prefixes[(prestigeLevel - 1) % prefixes.length];
+  const suffix = suffixes[(prestigeLevel - 1) % suffixes.length];
+  
+  return {
+    ...badge,
+    name: `${prefix} ${badge.name} ${suffix}`,
+    limit: badge.limit * Math.pow(2, prestigeLevel),
+    desc: `[Prestige ${prestigeLevel}] ${badge.desc} Now with more inflation!`,
+    icon: badge.icon.repeat((prestigeLevel % 3) + 1)
+  };
+}

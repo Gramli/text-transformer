@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { modes } from "./lib/transformers.js";
   import { scams } from "./lib/scamData.js";
-  import { badges } from "./lib/badgeData.js";
+  import { badges, inflateBadge } from "./lib/badgeData.js";
   import { getRandomFormattedText } from "./lib/socialTemplates.js";
   import { initSpeechRecognition, initVoices, toggleListening, speakText, stopSpeaking } from "./lib/speechService.js";
   import {
@@ -21,6 +21,7 @@
   import GandalfBlocker from "./lib/GandalfBlocker.svelte";
   import BadgeToast from "./lib/BadgeToast.svelte";
   import BadgesProfileModal from "./lib/BadgesProfileModal.svelte";
+  import PrestigeModal from "./lib/PrestigeModal.svelte";
 
   // ── State ──────────────────────────────────────────────
   let inputText = "";
@@ -40,13 +41,14 @@
   let showBSOD = false;
   let showGandalf = false;
   let showBadgesProfile = false;
+  let showPrestigeModal = false;
 
   let currentScam = null;
   let pastedTextGandalf = "";
   let comboPos = { top: 50, left: 50 };
   let specialCopyState = "";
 
-  let stats = { visits: 0, transforms: 0 };
+  let stats = { visits: 0, transforms: 0, prestigeLevel: 0 };
   let earnedBadgeIds = [];
   let recentBadge = null;
   let badgeTimeout;
@@ -76,15 +78,29 @@
 
   function checkBadges(triggerType) {
     const val = triggerType === 'visit' ? stats.visits : stats.transforms;
-    const newlyEarned = badges.filter(b => b.type === triggerType && b.limit <= val && !earnedBadgeIds.includes(b.id));
+    const currentPrestige = stats.prestigeLevel || 0;
+    
+    // Inflate limits based on current prestige
+    const newlyEarned = badges.map(b => inflateBadge(b, currentPrestige))
+      .filter(b => b.type === triggerType && b.limit <= val && !earnedBadgeIds.includes(b.id));
     
     if (newlyEarned.length > 0) {
       newlyEarned.forEach(b => earnedBadgeIds.push(b.id));
+      earnedBadgeIds = earnedBadgeIds; // trigger reactivity
       localStorage.setItem("absurdBadges", JSON.stringify(earnedBadgeIds));
       
       recentBadge = newlyEarned[newlyEarned.length - 1];
       clearTimeout(badgeTimeout);
       badgeTimeout = setTimeout(() => { recentBadge = null; }, 5000);
+      
+      // Check for prestige unlock
+      if (earnedBadgeIds.length >= badges.length) {
+        stats.prestigeLevel = (stats.prestigeLevel || 0) + 1;
+        earnedBadgeIds = []; // Reset earned badge IDs
+        localStorage.setItem("absurdStats", JSON.stringify(stats));
+        localStorage.setItem("absurdBadges", JSON.stringify(earnedBadgeIds));
+        showPrestigeModal = true;
+      }
     }
   }
 
@@ -214,7 +230,7 @@
   // ── Lifecycle ──────────────────────────────────────────
   onMount(() => {
     // Badges initialization
-    const savedStats = JSON.parse(localStorage.getItem("absurdStats") || '{"visits":0, "transforms":0}');
+    const savedStats = JSON.parse(localStorage.getItem("absurdStats") || '{"visits":0, "transforms":0, "prestigeLevel":0}');
     const savedBadges = JSON.parse(localStorage.getItem("absurdBadges") || '[]');
     savedStats.visits += 1;
     stats = savedStats;
@@ -258,7 +274,9 @@
   </div>
 
   <div class="profile-btn-container">
-    <button class="profile-btn" on:click={() => showBadgesProfile = true}>🏆 Definitely Not Dev Badges ({earnedBadgeIds.length})</button>
+    <button class="profile-btn" on:click={() => showBadgesProfile = true}>
+      🏆 DEV Badges ({earnedBadgeIds.length}) {#if stats.prestigeLevel > 0}<br/><small>Prestige {stats.prestigeLevel}</small>{/if}
+    </button>
   </div>
   
   <div class="cheats-btn-container">
@@ -268,7 +286,8 @@
   <ManualModal bind:visible={showManual} />
   <CheatsModal bind:visible={showCheats} />
   <BadgeToast badge={recentBadge} />
-  <BadgesProfileModal bind:visible={showBadgesProfile} {earnedBadgeIds} />
+  <BadgesProfileModal bind:visible={showBadgesProfile} {earnedBadgeIds} prestigeLevel={stats.prestigeLevel} />
+  <PrestigeModal bind:visible={showPrestigeModal} prestigeLevel={stats.prestigeLevel} />
   <AbsurdTimeBadge />
   <PremiumModal visible={showPremiumModal} />
   <ScamModal bind:visible={showScamModal} scam={currentScam} />

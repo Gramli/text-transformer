@@ -1,8 +1,11 @@
 <script>
-  import { badges } from './badgeData.js';
+  import { badges, inflateBadge } from './badgeData.js';
   export let visible = false;
   export let earnedBadgeIds = [];
+  export let prestigeLevel = 0;
   function close() { visible = false; }
+  
+  $: inflatedBadges = badges.map(b => inflateBadge(b, prestigeLevel));
 </script>
 
 {#if visible}
@@ -11,7 +14,11 @@
   <div class="modal-backdrop" on:click={close}>
     <div class="modal" on:click|stopPropagation>
       <button class="close-btn" on:click={close}>X</button>
-      <h2>🦄 DEV Profile Badges</h2>
+      <h2>🦄 DEV Profile Badges
+        {#if prestigeLevel > 0}
+          <span class="prestige-title"><br />[ PRESTIGE {prestigeLevel} ]</span>
+        {/if}
+      </h2>
       <p class="subtitle">Collect digital stickers to fill the void in your soul! Just like other sites.</p>
       
       <div class="stats-overview">
@@ -19,7 +26,7 @@
       </div>
       
       <div class="badges-grid">
-        {#each badges as badge}
+        {#each inflatedBadges as badge}
           <div class="badge-card {earnedBadgeIds.includes(badge.id) ? 'earned' : 'locked'} rarity-{badge.rarity.toLowerCase()}">
             <div class="rarity-label">{badge.rarity}</div>
             <div class="badge-icon">{badge.icon}</div>
@@ -36,6 +43,9 @@
 {/if}
 
 <style>
+  .prestige-title { color: yellow; text-shadow: 2px 2px red; font-size: 1.5rem; animation: pulse 1s infinite alternate; }
+  @keyframes pulse { from { opacity: 0.8; } to { opacity: 1; text-shadow: 2px 2px white; } }
+
   .modal-backdrop {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: rgba(0,0,0,0.8); z-index: 2000;

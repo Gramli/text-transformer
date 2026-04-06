@@ -46,6 +46,10 @@ The Absurd Text Transformer takes normal text and ruins it — beautifully. It o
 - **Scam Modal** — randomly-timed "YOU HAVE WON" pop-ups
 - **Premium Upsell Modal** — fake $499 token purchases (floppy disk payments only)
 - **Absurd Time Badge** — displays the current time in a random obscure timezone
+- **Spread the Chaos Buttons** — automatically format your transformed text into unhinged social media statuses (dev.to, LinkedIn, Teams, Recruiter)
+- **DEV Profile Badges** — unlock dev.to-parody achievements based on visits and transforms
+- **Badge Rarity System** — every badge has a randomly assigned rarity on load (Common, Rare, Legendary, Existential)
+- **Prestige Mode (Badge Inflation Era)** — collect all badges to unlock prestige mode, which continuously inflates badge requirements, icons, and names with ridiculous corporate suffixes!
 - **Anti-Paste Punisher** — blocks Ctrl+V with a massive Gandalf overlay and fiery Balrog pit
 - **Keyboard-only transform** — `Scroll Lock` / `Insert` to transform, `Pause` for voice input
 
@@ -129,7 +133,12 @@ src/
 │   ├── AbsurdTimeBadge.svelte  # Timezone badge
 │   ├── EvilClippy.svelte   # Annoying floating paperclip
 │   ├── CursorTrails.svelte # 90s cursor particle effects
-│   └── GandalfBlocker.svelte # Anti-Paste Punisher overlay
+  ├── GandalfBlocker.svelte # Anti-Paste Punisher overlay
+  ├── socialTemplates.js  # Unhinged templates for social sharing
+  ├── badgeData.js        # DEV-parody achievements and prestige inflation logic
+  ├── BadgeToast.svelte   # Animated unlock notification toast
+  ├── BadgesProfileModal.svelte # Grid of collected and locked badges
+  └── PrestigeModal.svelte # Badge Inflation Era ascension modal
 ```
 
 ---
