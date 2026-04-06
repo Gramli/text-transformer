@@ -228,7 +228,7 @@
 
   <div class="profile-btn-container">
     <button class="profile-btn" on:click={() => showBadgesProfile = true}>
-      🏆 DEV Badges ({$earnedIds.length}) {#if $stats.prestigeLevel > 0}<br/><small>Prestige {$stats.prestigeLevel}</small>{/if}
+      🏆 Not Dev Badges ({$earnedIds.length}) {#if $stats.prestigeLevel > 0}<br/><small>Prestige {$stats.prestigeLevel}</small>{/if}
     </button>
   </div>
   

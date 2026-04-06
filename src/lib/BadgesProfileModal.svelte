@@ -14,7 +14,7 @@
   <div class="modal-backdrop" on:click={close}>
     <div class="modal" on:click|stopPropagation>
       <button class="close-btn" on:click={close}>X</button>
-      <h2>🦄 DEV Profile Badges
+      <h2>🦄 Definitely Not Dev Badges™
         {#if prestigeLevel > 0}
           <span class="prestige-title"><br />[ PRESTIGE {prestigeLevel} ]</span>
         {/if}
