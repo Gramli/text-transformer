@@ -45,7 +45,8 @@
   .absurd-time-badge {
     position: fixed;
     top: 10px;
-    right: 10px;
+    left: 50%;
+    transform: translateX(-50%);
     background: #000;
     color: #0f0;
     padding: 0.5rem 1rem;
@@ -64,6 +65,10 @@
 
   @media (max-width: 768px) {
     .absurd-time-badge {
+      top: 10px;
+      right: 10px;
+      left: auto;
+      transform: none;
       top: auto;
       bottom: 70px;
       right: 5px;

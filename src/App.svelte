@@ -2,6 +2,8 @@
   import { onMount } from "svelte";
   import { modes } from "./lib/transformers.js";
   import { scams } from "./lib/scamData.js";
+  import { badges } from "./lib/badgeData.js";
+  import { getRandomFormattedText } from "./lib/socialTemplates.js";
   import { initSpeechRecognition, initVoices, toggleListening, speakText, stopSpeaking } from "./lib/speechService.js";
   import {
     SHAKE_THRESHOLD, SHAKE_COOLDOWN_MS, SHAKING_DURATION_MS,
@@ -17,6 +19,8 @@
   import EvilClippy from "./lib/EvilClippy.svelte";
   import CursorTrails from "./lib/CursorTrails.svelte";
   import GandalfBlocker from "./lib/GandalfBlocker.svelte";
+  import BadgeToast from "./lib/BadgeToast.svelte";
+  import BadgesProfileModal from "./lib/BadgesProfileModal.svelte";
 
   // ── State ──────────────────────────────────────────────
   let inputText = "";
@@ -35,10 +39,17 @@
   let showCheats = false;
   let showBSOD = false;
   let showGandalf = false;
+  let showBadgesProfile = false;
 
   let currentScam = null;
   let pastedTextGandalf = "";
   let comboPos = { top: 50, left: 50 };
+  let specialCopyState = "";
+
+  let stats = { visits: 0, transforms: 0 };
+  let earnedBadgeIds = [];
+  let recentBadge = null;
+  let badgeTimeout;
 
   // ── Derived ────────────────────────────────────────────
   $: modeInfo = modes[curModeIdx];
@@ -53,11 +64,28 @@
 
   function handleTransform() {
     transformedText = modeInfo.transform(inputText);
+    stats.transforms += 1;
+    localStorage.setItem("absurdStats", JSON.stringify(stats));
+    checkBadges("transform");
   }
 
   function transformWithShake() {
     triggerShaking();
     handleTransform();
+  }
+
+  function checkBadges(triggerType) {
+    const val = triggerType === 'visit' ? stats.visits : stats.transforms;
+    const newlyEarned = badges.filter(b => b.type === triggerType && b.limit <= val && !earnedBadgeIds.includes(b.id));
+    
+    if (newlyEarned.length > 0) {
+      newlyEarned.forEach(b => earnedBadgeIds.push(b.id));
+      localStorage.setItem("absurdBadges", JSON.stringify(earnedBadgeIds));
+      
+      recentBadge = newlyEarned[newlyEarned.length - 1];
+      clearTimeout(badgeTimeout);
+      badgeTimeout = setTimeout(() => { recentBadge = null; }, 5000);
+    }
   }
 
   // ── Input handlers ─────────────────────────────────────
@@ -113,6 +141,16 @@
     if (!transformedText) return;
     isPlaying = true;
     speakText(transformedText, mode, () => { isPlaying = false; });
+  }
+
+  function copySpecialFormat(type) {
+    if (!transformedText) return;
+    
+    const result = getRandomFormattedText(type, transformedText);
+    
+    navigator.clipboard.writeText(result);
+    specialCopyState = type;
+    setTimeout(() => (specialCopyState = ""), 2000);
   }
 
   // ── Setup helpers (each returns its own cleanup) ───────
@@ -175,6 +213,15 @@
 
   // ── Lifecycle ──────────────────────────────────────────
   onMount(() => {
+    // Badges initialization
+    const savedStats = JSON.parse(localStorage.getItem("absurdStats") || '{"visits":0, "transforms":0}');
+    const savedBadges = JSON.parse(localStorage.getItem("absurdBadges") || '[]');
+    savedStats.visits += 1;
+    stats = savedStats;
+    earnedBadgeIds = savedBadges;
+    localStorage.setItem("absurdStats", JSON.stringify(stats));
+    checkBadges("visit");
+
     initSpeechRecognition(
       (transcript) => {
         inputText = (inputText + " " + transcript).trim();
@@ -209,6 +256,10 @@
   <div class="manual-btn-container">
     <button class="manual-btn" on:click={() => showManual = true}>📖 How to use</button>
   </div>
+
+  <div class="profile-btn-container">
+    <button class="profile-btn" on:click={() => showBadgesProfile = true}>🏆 Definitely Not Dev Badges ({earnedBadgeIds.length})</button>
+  </div>
   
   <div class="cheats-btn-container">
     <button class="cheats-trigger-btn" on:click={() => showCheats = true}>🎮 CH34T5!</button>
@@ -216,6 +267,8 @@
 
   <ManualModal bind:visible={showManual} />
   <CheatsModal bind:visible={showCheats} />
+  <BadgeToast badge={recentBadge} />
+  <BadgesProfileModal bind:visible={showBadgesProfile} {earnedBadgeIds} />
   <AbsurdTimeBadge />
   <PremiumModal visible={showPremiumModal} />
   <ScamModal bind:visible={showScamModal} scam={currentScam} />
@@ -287,6 +340,24 @@
             {:else}
               📋 Copy Text
             {/if}
+          </button>
+        </div>
+      </div>
+
+      <div class="formatting-section">
+        <h3>✨ SPREAD THE CHAOS ✨</h3>
+        <div class="format-buttons">
+          <button class="fmt-btn devto" disabled={!transformedText} on:click={() => copySpecialFormat('devto')}>
+            {specialCopyState === 'devto' ? 'COPIED 🚀' : '👨‍💻 dev.to Quick Post'}
+          </button>
+          <button class="fmt-btn linkedin" disabled={!transformedText} on:click={() => copySpecialFormat('linkedin')}>
+            {specialCopyState === 'linkedin' ? 'SYNERGIZED 💼' : '💼 LinkedIn Post'}
+          </button>
+          <button class="fmt-btn teams" disabled={!transformedText} on:click={() => copySpecialFormat('teams')}>
+            {specialCopyState === 'teams' ? 'CIRCLED BACK 🤝' : '🤝 Teams Message'}
+          </button>
+          <button class="fmt-btn recruiter" disabled={!transformedText} on:click={() => copySpecialFormat('recruiter')}>
+            {specialCopyState === 'recruiter' ? 'DECLINED 🏃' : '🏃 Respond to Recruiter'}
           </button>
         </div>
       </div>
@@ -412,6 +483,31 @@
     border-color: #ff00ff;
   }
 
+  .profile-btn-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+  }
+  .profile-btn {
+    background: #000;
+    color: white;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border: 3px solid #ff00ff;
+    padding: 10px 15px;
+    cursor: pointer;
+    box-shadow: -4px 4px 0px #00ffff;
+    transition: all 0.2s;
+    font-family: monospace;
+    transform: rotate(2deg);
+  }
+  .profile-btn:hover {
+    background: #ff00ff;
+    color: yellow;
+    transform: scale(1.1) rotate(0deg);
+  }
+
   .cheats-btn-container {
     position: fixed;
     bottom: 20px;
@@ -463,6 +559,63 @@
   .action-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px #ff00ff; }
   .action-btn:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px #ff00ff; }
   .action-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; }
+
+  /* ── Formatting section ──────────────────────────────────── */
+  .formatting-section {
+    margin-top: 1rem;
+    text-align: center;
+    border: 3px double #00ffff;
+    padding: 1rem;
+    background: rgba(255,192,203,0.5);
+    border-radius: 10px;
+  }
+  .formatting-section h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.5rem;
+    color: #ff00ff;
+    text-shadow: 1px 1px 0px black;
+    transform: rotate(-1deg);
+  }
+  .format-buttons {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.8rem;
+    align-items: center;
+  }
+  .fmt-btn {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.8rem;
+    font-family: inherit;
+    font-size: 1.2rem;
+    font-weight: 900;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 4px solid black;
+    box-shadow: 4px 4px 0 black;
+  }
+  .fmt-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 black;
+  }
+  .fmt-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+  
+  .fmt-btn.devto { background: #000000; color: #ffffff; border-color: #00ff00; }
+  .fmt-btn.linkedin { background: #0077b5; color: #ffffff; border-color: #ffff00; }
+  .fmt-btn.teams { background: #6264a7; color: #ffffff; border-color: #ff00ff; }
+  .fmt-btn.recruiter { background: #ff4500; color: #ffffff; border-color: #00ffff; }
+
+  .fmt-btn:hover:not(:disabled) {
+    transform: rotate(2deg) scale(1.05);
+  }
 
   /* ── Mobile transform button (hidden on desktop, shown on touch devices) ──── */
   .mobile-warning { display: none; }
@@ -536,6 +689,12 @@
       border-width: 3px;
       box-shadow: 3px 3px 0px black;
     }
+    .profile-btn {
+      font-size: 0.9rem;
+      padding: 6px 10px;
+      border-width: 3px;
+      box-shadow: -2px 2px 0px #00ffff;
+    }
     .cheats-trigger-btn {
       font-size: 1rem;
       padding: 8px 10px;
@@ -564,6 +723,10 @@
     textarea { height: 100px; font-size: 1rem; }
     .output-pane { padding-bottom: 3.5rem; }
     .action-btn { font-size: 0.9rem; padding: 0.4rem 0.9rem; }
+    
+    .formatting-section { padding: 0.5rem; margin-top: 0.5rem; }
+    .formatting-section h3 { font-size: 1.2rem; }
+    .fmt-btn { width: 90%; min-width: auto; padding: 0.6rem; font-size: 1rem; border-width: 3px; box-shadow: 3px 3px 0 black; }
   }
 
   @media (max-width: 480px) {
